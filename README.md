@@ -1,6 +1,6 @@
 # BestBio
 
-This mini app provides a user-friendly graphical interface. It enumerates the COM ports on a Windows machine. If a scanner is attached to any, connection can be esatablished. A disconnect buttons breaks any existing connection. Register card sends a card's serial number to 3way's authentication platform.
+This mini app provides a user-friendly graphical interface. It enumerates the COM ports on a Windows machine. If a scanner is attached to any, connection can be esatablished. A disconnect button breaks any existing connection. Register card sends a card's serial number to 3way's authentication platform.
 
 ## Project Structure
 
