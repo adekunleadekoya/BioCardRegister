@@ -1,0 +1,50 @@
+plugins {
+    id 'application'
+}
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+   
+    implementation 'com.fazecast:jSerialComm:2.9.3',
+    'org.json:json:20230227'
+}
+
+application {
+   
+    mainClass = 'MainApp'
+}
+
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(22) // Ensure Java 17 or later
+    }
+}
+
+tasks.withType(JavaExec) {
+    jvmArgs = [
+        '--module-path', 'C:\\Program Files\\Java\\javafx-sdk-24.0.1\\lib',
+        '--add-modules', 'javafx.controls,javafx.fxml,javafx.graphics'
+    ]
+}
+
+tasks.withType(JavaCompile) {
+    options.compilerArgs += [
+        '--module-path', 'C:\\Program Files\\Java\\javafx-sdk-24.0.1\\lib',
+        '--add-modules', 'javafx.controls,javafx.fxml,javafx.graphics'
+    ]
+}
+
+jar {
+    manifest {
+        attributes(
+            'Main-Class': application.mainClass // Specify the main class
+        )
+    }
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+    from {
+        configurations.runtimeClasspath.collect { it.isDirectory() ? it : zipTree(it) }
+    }
+}
