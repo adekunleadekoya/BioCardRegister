@@ -13,6 +13,7 @@ import java.net.URL;
 import java.nio.charset.StandardCharsets;
  
 import org.json.JSONObject;
+import com.example.utils.UserCredentials;
 
 public class MainController {
 
@@ -76,11 +77,12 @@ public class MainController {
     @FXML
 
     private void handleRegisterCard() {
-        try {
+        try {                  
 
-            System.out.println("Register Card??? ");             
-
-            String Authtoken = getAuthToken("adekoyaa@run.edu.ng", "l4MLO7'3Yo");
+            // "l4MLO7'3Yo"
+            String username = UserCredentials.getUsername();
+            String password = UserCredentials.getPassword();
+            String Authtoken = getAuthToken(username, password);
             if (Authtoken == null) {
                 System.out.println("Failed to get authentication token.");
                 return;
@@ -91,12 +93,8 @@ public class MainController {
                 //System.out.println(String.format("Card(%s), token(%s)", serialNumber, Authtoken));
                 String resp= registerCardVia3wc(Authtoken, serialNumber);
                 System.out.println("Response from registerCardVia3wc: " + resp);
-        });
-             
-       
-
-
-        System.out.println("here 2 ???");
+        });         
+            
             
         } catch (Exception e) {
         }
@@ -105,22 +103,16 @@ public class MainController {
 
   @FXML
 private void getCardSerialNumber(Consumer<String> callback) {
-    try {
-        System.out.println("Get Serial Number of Card???");
+    try {        
         byte cmdid = CMD_CARDSN; // Get serial number of card
         mCmdSize = 0;
-
         SerialPortUtil.setDataReceivedCallback(data -> {
-            try {
-              
+            try {              
                 System.arraycopy(data, 0, mCmdData, mCmdSize, data.length);
-
                 int datasize = (byte) (mCmdData[5]) + (mCmdData[6] << 8 & 0xFF00) - 1;
-
                 if (datasize > 0) {
                     byte[] cardsn = new byte[64];
                     System.arraycopy(mCmdData, 8, cardsn, 0, datasize);
-
                     // Convert the card serial number to a hexadecimal string
                     String sn = Integer.toHexString(cardsn[0] & 0xFF)
                             + Integer.toHexString(cardsn[1] & 0xFF)
@@ -159,9 +151,7 @@ private void getCardSerialNumber(Consumer<String> callback) {
             byte cmdid = CMD_GETSN; // get serial number of scanner
             mCmdSize = 0;
             SerialPortUtil.setDataReceivedCallback(data -> {
-
                 System.arraycopy(data, 0, mCmdData, mCmdSize, data.length);
-
                 int datasize = (byte) (mCmdData[5]) + (mCmdData[6] << 8 & 0xFF00) - 1;
                 if (mCmdData[7] == 1) {
                     byte[] snb = new byte[32];
