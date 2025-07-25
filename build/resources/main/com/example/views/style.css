@@ -1,0 +1,15 @@
+/* Style for Buttons */
+/* Default button style */
+.button {
+    -fx-background-color: #0078d7; /* Blue background */
+    -fx-text-fill: white;          /* White text */
+    -fx-font-size: 12px;           /* Default font size */
+    -fx-padding: 10 20;            /* Padding inside the button */
+    -fx-cursor: hand;              /* Change cursor to hand on hover */
+}
+
+/* Button hover effect */
+.button:hover {
+    -fx-font-size: 14px;           /* Slightly larger font size on hover */
+    -fx-background-color: #005bb5; /* Darker blue background on hover */
+}
