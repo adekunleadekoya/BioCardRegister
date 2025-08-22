@@ -20,10 +20,12 @@
         </VBox>
     </TitledPane>
 
-    <!-- Authentication Section -->
-    <TitledPane text="Authentication" expanded="true">
+    <!-- Card Section -->
+    <TitledPane text="Card" expanded="true">
         <VBox spacing="10" alignment="TOP_LEFT" style="-fx-padding: 10;" fillWidth="true">
             <Button fx:id="registerCardBtn" text="Register Card" onAction="#handleRegisterCard" maxWidth="Infinity" />
+            <Button fx:id="readCardSNBtn" text="Read Card SN" onAction="#handleReadCardSN" maxWidth="Infinity" />
+            <Button fx:id="validateCardBtn" text="Validate Card" onAction="#handleValidateCard" maxWidth="Infinity" />
         </VBox>
     </TitledPane>
 

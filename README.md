@@ -53,9 +53,15 @@ my-javafx-app
    ```
    gradle  run
 
-5. execute jar file
-   ```  
+5. Execute the jar file
+   ```
    java --module-path modules/lib  --add-modules javafx.controls,javafx.fxml,javafx.graphics -jar build/libs/my-javafx-app.jar
+   ```
+
+   **Note:**
+   - Place `config.txt` in the same directory as `my-javafx-app.jar`.
+   - The application will read the base URL from this external `config.txt` file.
+   - Users can edit `config.txt` at any time to change the base URL, without needing to rebuild or repackage the app.
 
 ## Usage
 

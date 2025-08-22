@@ -16,6 +16,25 @@ import org.json.JSONObject;
 import com.example.utils.UserCredentials;
 
 public class MainController {
+    // Path to the token file, accessible from any function
+    private static final String TOKEN_FILE_PATH = "token.txt";
+    // Cached base URL
+    private static String cachedBaseUrl = null;
+
+    // Reads the base URL from config.txt once and caches it
+    private static String getBaseUrl() {
+        if (cachedBaseUrl != null) {
+            return cachedBaseUrl;
+        }
+        try {
+            java.nio.file.Path path = java.nio.file.Paths.get("config.txt");
+            cachedBaseUrl = java.nio.file.Files.readAllLines(path).get(0).trim();
+        } catch (Exception e) {
+            System.err.println("Error reading base URL from config.txt: " + e.getMessage());
+            cachedBaseUrl = "https://run.fintecgrate.com/"; // fallback
+        }
+        return cachedBaseUrl;
+    }
 
     // Callback for the device serial number
     private Consumer<String> deviceSerialNumberCallback;
@@ -38,6 +57,10 @@ public class MainController {
     private Button serialNumberBtn;
     @FXML
     private Button registerCardBtn;
+    @FXML
+    private Button readCardSNBtn;
+    @FXML
+    private Button validateCardBtn;
 
     private String selectedPort = null;
 
@@ -74,31 +97,125 @@ public class MainController {
     }
  
 
+ @FXML
+    private void handleReadCardSN() {
+
+        // Pass the callback to handle the card serial number
+        getCardSerialNumber(serialNumber -> {
+            System.out.println("Reading Card Serial Number..."  +  serialNumber);     
+        });    
+       
+    }
+
+@FXML
+    private void handleValidateCard()
+    {
+        try {
+            // Read token from file
+            String Authtoken = null;
+            java.nio.file.Path tokenPath = java.nio.file.Paths.get(TOKEN_FILE_PATH);
+            if (java.nio.file.Files.exists(tokenPath)) {
+                try {
+                    Authtoken = java.nio.file.Files.readAllLines(tokenPath).get(0).trim();
+                } catch (Exception e) {
+                    System.err.println("Error reading token from token.txt: " + e.getMessage());
+                }
+            }
+
+            String username = UserCredentials.getUsername();
+            String password = UserCredentials.getPassword();
+
+            final String[] tokenToUse = new String[]{Authtoken};
+            getCardSerialNumber(serialNumber -> {
+                if (tokenToUse[0] == null || tokenToUse[0].isEmpty()) {
+                    tokenToUse[0] = getAuthToken(username, password);
+                    if (tokenToUse[0] != null) {
+                        try {
+                            java.nio.file.Files.write(tokenPath, java.util.Collections.singleton(tokenToUse[0]));
+                        } catch (Exception e) {
+                            System.err.println("Error writing token to token.txt: " + e.getMessage());
+                        }
+                    }
+                }
+
+                String response = validateCardVia3wc(tokenToUse[0], serialNumber);
+                System.out.println("ValidateCardVia3wc: " + response);
+
+                // If response contains 'Unauthorized', get new token and retry
+                if (response != null && response.toLowerCase().contains("unauthorized")) {
+                    tokenToUse[0] = getAuthToken(username, password);
+                    if (tokenToUse[0] != null) {
+                        try {
+                            java.nio.file.Files.write(tokenPath, java.util.Collections.singleton(tokenToUse[0]));
+                        } catch (Exception e) {
+                            System.err.println("Error writing token to token.txt: " + e.getMessage());
+                        }
+                        response = validateCardVia3wc(tokenToUse[0], serialNumber);
+                        System.out.println("ValidateCardVia3wc (retry): " + response);
+                    } else {
+                        System.out.println("Failed to get new authentication token after Unauthorized.");
+                    }
+                }
+            });
+        } catch (Exception e) {
+            System.err.println("Error in handleValidateCard: " + e.getMessage());
+        }
+    }
+
     @FXML
 
     private void handleRegisterCard() {
-        try {                  
+        try {
+            // Read token from file
+            String Authtoken = null;
+            java.nio.file.Path tokenPath = java.nio.file.Paths.get(TOKEN_FILE_PATH);
+            if (java.nio.file.Files.exists(tokenPath)) {
+                try {
+                    Authtoken = java.nio.file.Files.readAllLines(tokenPath).get(0).trim();
+                } catch (Exception e) {
+                    System.err.println("Error reading token from token.txt: " + e.getMessage());
+                }
+            }
 
-            // "l4MLO7'3Yo"
             String username = UserCredentials.getUsername();
             String password = UserCredentials.getPassword();
-            String Authtoken = getAuthToken(username, password);
-            if (Authtoken == null) {
-                System.out.println("Failed to get authentication token.");
-                return;
-            }           
-        
-            // Pass the callback to handle the card serial number
-        getCardSerialNumber(serialNumber -> {
-                //System.out.println(String.format("Card(%s), token(%s)", serialNumber, Authtoken));
-                String resp= registerCardVia3wc(Authtoken, serialNumber);
-                System.out.println("Response from registerCardVia3wc: " + resp);
-        });         
-            
-            
-        } catch (Exception e) {
-        }
+            String apiKey = UserCredentials.getApiKey();
 
+            final String[] tokenToUse = new String[]{Authtoken};
+            getCardSerialNumber(serialNumber -> {
+                if (tokenToUse[0] == null || tokenToUse[0].isEmpty()) {
+                    tokenToUse[0] = getAuthToken(username, password);
+                    if (tokenToUse[0] != null) {
+                        try {
+                            java.nio.file.Files.write(tokenPath, java.util.Collections.singleton(tokenToUse[0]));
+                        } catch (Exception e) {
+                            System.err.println("Error writing token to token.txt: " + e.getMessage());
+                        }
+                    }
+                }
+
+                String resp = registerCardVia3wc(tokenToUse[0], apiKey, serialNumber);
+                System.out.println("RegisterCardVia3wc: " + resp);
+
+                // If response contains 'Unauthorized', get new token and retry
+                if (resp != null && resp.toLowerCase().contains("unauthorized")) {
+                    tokenToUse[0] = getAuthToken(username, password);
+                    if (tokenToUse[0] != null) {
+                        try {
+                            java.nio.file.Files.write(tokenPath, java.util.Collections.singleton(tokenToUse[0]));
+                        } catch (Exception e) {
+                            System.err.println("Error writing token to token.txt: " + e.getMessage());
+                        }
+                        resp = registerCardVia3wc(tokenToUse[0], apiKey, serialNumber);
+                        System.out.println("RegisterCardVia3wc (retry): " + resp);
+                    } else {
+                        System.out.println("Failed to get new authentication token after Unauthorized.");
+                    }
+                }
+            });
+        } catch (Exception e) {
+            System.err.println("Error in handleRegisterCard: " + e.getMessage());
+        }
     }
 
   @FXML
@@ -121,6 +238,7 @@ private void getCardSerialNumber(Consumer<String> callback) {
 
                     // Invoke the callback with the serial number
                     if (callback != null) {
+                        //System.out.println("Card Serial Number: " + sn);
                         callback.accept(sn);
                     }
                 } else {
@@ -194,7 +312,6 @@ private void getCardSerialNumber(Consumer<String> callback) {
         int sum = calcCheckSum(sendbuf, 7 + size);
         sendbuf[7 + size] = (byte) sum;
         sendbuf[8 + size] = (byte) (sum >> 8);
-
         // Set the device command
         mDeviceCmd = cmdid;
 
@@ -212,27 +329,22 @@ private void getCardSerialNumber(Consumer<String> callback) {
 
 
      public String getAuthToken(String emailAddy, String password) {
-        String apiUrl = "https://run.fintecgrate.com/api/v1/authenticate";
+        System.out.println("Getting Auth Token...");
+        String apiUrl = getBaseUrl() + "api/v1/authenticate";
         String response = "";
-
         try {
             // Create the URL object
             URL url = new URL(apiUrl);
-
             // Open the connection
             HttpURLConnection connection = (HttpURLConnection) url.openConnection();
-
             // Set the request method to POST
             connection.setRequestMethod("POST");
-
             // Set the request headers
             connection.setRequestProperty("accept", "application/json");
             connection.setRequestProperty("Content-Type", "application/json");
             connection.setRequestProperty("X-CSRF-TOKEN", "");
-
             // Enable output for the connection
             connection.setDoOutput(true);
-
             // Create the JSON payload
             String jsonInputString = String.format(
                 "{\"email\": \"%s\", \"password\": \"%s\"}",
@@ -263,19 +375,14 @@ private void getCardSerialNumber(Consumer<String> callback) {
             response = "Exception: " + e.getMessage();
             System.out.println("getAuthToken(failed): " + response);
             response = null; // Set to null if an exception occurred
-        }
-
-       
+        }       
         return response;
-    }
-
- 
+    } 
 
  public String extractToken(String jsonResponse) {
         try {
             // Parse the JSON response
             JSONObject responseObject = new JSONObject(jsonResponse);
-
             // Check if the "status" is true
             if (responseObject.getBoolean("status")) {
                 // Navigate to the "data" object and extract the "token"
@@ -293,30 +400,71 @@ private void getCardSerialNumber(Consumer<String> callback) {
         }
     }
 
-
-     public String registerCardVia3wc(String token, String sn) {
-        String apiUrl = "https://run.fintecgrate.com/api/v1/register-card?serial_number=" + sn;
-        String responseMessage = "";
-
+    public String validateCardVia3wc(String token,  String sn) {
+        String apiUrl = getBaseUrl() + "api/v1/validate-card?serial_number=" + sn;  
+        String responseMessage = ""; 
         try {
             // Create the URL object
             URL url = new URL(apiUrl);
-
             // Open the connection
             HttpURLConnection connection = (HttpURLConnection) url.openConnection();
 
-            // Set the request method to POST
-            connection.setRequestMethod("POST");
-
+            // Set the request method to GET
+            connection.setRequestMethod("GET");
             // Set the request headers
-            connection.setRequestProperty("accept", "*/*");
+            connection.setRequestProperty("accept", "*/*");            
             connection.setRequestProperty("Authorization", "Bearer " + token);
             connection.setRequestProperty("X-CSRF-TOKEN", "");
 
-            // Enable output for the connection
-            connection.setDoOutput(true);
+            // Read the response
+            int responseCode = connection.getResponseCode();
+            if (responseCode == HttpURLConnection.HTTP_UNAUTHORIZED ) {
+                responseMessage = "Unauthorized";
+                System.out.println("validateCardVia3wc(failed): " + responseMessage);
+            }
+            else if (responseCode == HttpURLConnection.HTTP_OK) {
+                String jsonResponse = new String(connection.getInputStream().readAllBytes(), StandardCharsets.UTF_8);
+                // Parse the JSON response
+                JSONObject responseObject = new JSONObject(jsonResponse);
+                // Check if the "status" is true
+                if (responseObject.getBoolean("status")) {
+                    // Extract the "message" and "is_valid" fields
+                    String message = responseObject.getString("message");
+                    boolean isActive = responseObject.getJSONObject("data")
+                                                   .getJSONObject("card")
+                                                   .getBoolean("is_active");
+                    boolean isUsed = responseObject.getJSONObject("data")
+                                                   .getJSONObject("card")
+                                                   .getBoolean("is_used");
 
-            // Write an empty payload (if required)
+                    responseMessage = String.format("Card (%s, %s, IsActive(%b), IsUsed(%b))", sn, message, isActive, isUsed);
+                } else {
+                    responseMessage = "Error: " + responseObject.getString("message");
+                }
+            } else {
+                responseMessage = "HTTP Error: " + responseCode + " - " + connection.getResponseMessage();
+            }
+
+        } catch (Exception e) {
+            responseMessage = "Exception: " + e.getMessage();
+            e.printStackTrace();
+        }
+
+        return responseMessage;
+    }
+    public String registerCardVia3wc(String token, String apikey, String sn) {
+        String apiUrl = getBaseUrl() + "api/v1/register-card?serial_number=" + sn;  
+
+        String responseMessage = "";
+        try {
+            URL url = new URL(apiUrl);
+            HttpURLConnection connection = (HttpURLConnection) url.openConnection();
+            connection.setRequestMethod("POST");
+            connection.setRequestProperty("accept", "*/*");
+            connection.setRequestProperty("X-API-KEY", apikey);
+            connection.setRequestProperty("Authorization", "Bearer " + token);
+            connection.setRequestProperty("X-CSRF-TOKEN", "");
+            connection.setDoOutput(true);
             try (OutputStream os = connection.getOutputStream()) {
                 byte[] input = "".getBytes(StandardCharsets.UTF_8);
                 os.write(input, 0, input.length);
@@ -324,12 +472,13 @@ private void getCardSerialNumber(Consumer<String> callback) {
 
             // Read the response
             int responseCode = connection.getResponseCode();
-            if (responseCode == HttpURLConnection.HTTP_OK || responseCode == HttpURLConnection.HTTP_CREATED) {
+            if (responseCode  == HttpURLConnection.HTTP_UNAUTHORIZED ) {
+                responseMessage = "Unauthorized";
+            }
+            else if (responseCode == HttpURLConnection.HTTP_OK || responseCode == HttpURLConnection.HTTP_CREATED) {
                 String jsonResponse = new String(connection.getInputStream().readAllBytes(), StandardCharsets.UTF_8);
-
                 // Parse the JSON response
                 JSONObject responseObject = new JSONObject(jsonResponse);
-
                 // Check if the "status" is true
                 if (responseObject.getBoolean("status")) {
                     // Extract the "message" and "is_used" fields
@@ -337,8 +486,7 @@ private void getCardSerialNumber(Consumer<String> callback) {
                     boolean isUsed = responseObject.getJSONObject("data")
                                                    .getJSONObject("card")
                                                    .getBoolean("is_used");
-
-                    responseMessage = String.format("Carrd(sn): %s, Message: %s, Is Used: %b", sn, message, isUsed);
+                    responseMessage = String.format("Card(%s, %s, IsUsed(%b))", sn, message, isUsed);
                 } else {
                     responseMessage = "Error: " + responseObject.getString("message");
                 }
